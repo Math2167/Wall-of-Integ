@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Confess Wall</title>
+<style>
+  :root{
+    --cork-a:#a97a4c;
+    --cork-b:#8a5f38;
+    --crimson:#a3223e;
+    --crimson-dark:#7a1830;
+    --ink:#2b1b17;
+    --paper-yellow:#fbe9a0;
+    --paper-pink:#f6c9d0;
+    --paper-mint:#c9e4d3;
+    --paper-sky:#c7dced;
+    --paper-lilac:#dcd0ea;
+    --cream:#fbf6ee;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html,body{
+    margin:0;
+    padding:0;
+    height:100%;
+    font-family:"Times New Roman", Times, serif;
+    background: var(--cork-a);
+    color:var(--ink);
+    overflow-x:hidden;
+  }
+
+  body{
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(0,0,0,0.08) 0, transparent 3%),
+      radial-gradient(circle at 60% 70%, rgba(0,0,0,0.07) 0, transparent 2.5%),
+      radial-gradient(circle at 80% 20%, rgba(0,0,0,0.08) 0, transparent 3%),
+      radial-gradient(circle at 35% 85%, rgba(0,0,0,0.06) 0, transparent 2.5%),
+      radial-gradient(circle at 90% 60%, rgba(0,0,0,0.07) 0, transparent 3%),
+      linear-gradient(135deg, var(--cork-a), var(--cork-b));
+    min-height:100vh;
+    position:relative;
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    text-align:center;
+    padding:38px 20px 18px;
+    position:relative;
+    z-index:2;
+  }
+
+  .banner{
+    display:inline-block;
+    background:var(--crimson);
+    color:var(--cream);
+    padding:14px 46px;
+    font-size:2.4rem;
+    letter-spacing:1px;
+    box-shadow:0 8px 18px rgba(0,0,0,0.35);
+    transform:rotate(-1.5deg);
+    position:relative;
+    border:1px solid rgba(255,255,255,0.15);
+  }
+
+  .banner::before, .banner::after{
+    content:"";
+    position:absolute;
+    top:-10px;
+    width:16px;
+    height:16px;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #e8e8e8, #8a8a8a 70%);
+    box-shadow:0 3px 4px rgba(0,0,0,0.4);
+  }
+  .banner::before{ left:22px; }
+  .banner::after{ right:22px; }
+
+  .subtitle{
+    margin-top:16px;
+    font-style:italic;
+    color:var(--cream);
+    opacity:0.85;
+    font-size:1.05rem;
+  }
+
+  .global-note{
+    margin-top:6px;
+    font-size:0.85rem;
+    color:var(--cream);
+    opacity:0.65;
+    font-style:italic;
+  }
+
+  /* ---------- Floating hearts ambience ---------- */
+  .hearts-bg{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    overflow:hidden;
+    z-index:0;
+  }
+  .heart-float{
+    position:absolute;
+    bottom:-40px;
+    color:rgba(255,255,255,0.18);
+    font-size:22px;
+    animation:rise linear infinite;
+    filter:drop-shadow(0 0 2px rgba(0,0,0,0.15));
+  }
+  @keyframes rise{
+    0%{ transform:translateY(0) translateX(0) rotate(0deg); opacity:0; }
+    10%{ opacity:1; }
+    90%{ opacity:0.8; }
+    100%{ transform:translateY(-115vh) translateX(20px) rotate(25deg); opacity:0; }
+  }
+
+  /* ---------- Board ---------- */
+  #board{
+    position:relative;
+    max-width:1200px;
+    margin:0 auto;
+    min-height:60vh;
+    padding:20px;
+    z-index:2;
+  }
+
+  .empty-state{
+    text-align:center;
+    color:var(--cream);
+    padding:60px 20px;
+    font-size:1.2rem;
+    font-style:italic;
+    opacity:0.85;
+  }
+  .empty-state span{
+    display:block;
+    font-size:2.2rem;
+    margin-bottom:10px;
+  }
+
+  .note{
+    position:absolute;
+    width:190px;
+    min-height:150px;
+    padding:20px 16px 16px;
+    cursor:pointer;
+    box-shadow:3px 6px 14px rgba(0,0,0,0.35);
+    transition:transform 0.15s ease, box-shadow 0.15s ease;
+    font-size:0.95rem;
+    line-height:1.4;
+    word-wrap:break-word;
+    overflow:hidden;
+  }
+  .note:hover{
+    transform:translateY(-6px) scale(1.03) !important;
+    box-shadow:5px 10px 20px rgba(0,0,0,0.45);
+    z-index:50;
+  }
+
+  .note .pin{
+    position:absolute;
+    top:-9px;
+    left:50%;
+    transform:translateX(-50%);
+    width:16px;
+    height:16px;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #ff8b9c, var(--crimson-dark) 75%);
+    box-shadow:0 3px 5px rgba(0,0,0,0.45);
+  }
+
+  .note .heart-mark{
+    position:absolute;
+    bottom:8px;
+    right:10px;
+    font-size:1rem;
+    opacity:0.55;
+  }
+
+  .note .quick-delete{
+    position:absolute;
+    top:4px;
+    right:4px;
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    background:rgba(0,0,0,0.12);
+    color:var(--ink);
+    border:none;
+    font-family:"Times New Roman", Times, serif;
+    font-size:0.9rem;
+    line-height:1;
+    cursor:pointer;
+    opacity:0;
+    transition:opacity 0.15s ease, background 0.15s ease;
+  }
+  .note:hover .quick-delete{ opacity:1; }
+  .note .quick-delete:hover{ background:var(--crimson); color:var(--cream); }
+
+  .note-text{
+    display:-webkit-box;
+    -webkit-line-clamp:6;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+
+  .paper-yellow{ background:var(--paper-yellow); }
+  .paper-pink{ background:var(--paper-pink); }
+  .paper-mint{ background:var(--paper-mint); }
+  .paper-sky{ background:var(--paper-sky); }
+  .paper-lilac{ background:var(--paper-lilac); }
+
+  /* ---------- Add button ---------- */
+  #add-btn{
+    position:fixed;
+    right:32px;
+    bottom:32px;
+    width:66px;
+    height:66px;
+    border-radius:50%;
+    background:var(--crimson);
+    color:var(--cream);
+    border:2px solid rgba(255,255,255,0.25);
+    font-size:1.9rem;
+    cursor:pointer;
+    box-shadow:0 8px 20px rgba(0,0,0,0.45);
+    z-index:100;
+    font-family:"Times New Roman", Times, serif;
+    transition:transform 0.15s ease, background 0.15s ease;
+  }
+  #add-btn:hover{
+    transform:scale(1.08);
+    background:var(--crimson-dark);
+  }
+
+  /* ---------- Modal ---------- */
+  .overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(20,10,8,0.55);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:200;
+    padding:20px;
+  }
+  .overlay.active{ display:flex; }
+
+  .modal{
+    background:var(--cream);
+    width:100%;
+    max-width:440px;
+    padding:26px 24px 20px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.5);
+    position:relative;
+    border-top:6px solid var(--crimson);
+  }
+
+  .modal h2{
+    margin:0 0 14px;
+    font-size:1.4rem;
+    color:var(--crimson-dark);
+    font-weight:normal;
+    letter-spacing:0.5px;
+  }
+
+  .modal textarea{
+    width:100%;
+    min-height:160px;
+    resize:vertical;
+    font-family:"Times New Roman", Times, serif;
+    font-size:1.05rem;
+    line-height:1.5;
+    padding:12px;
+    border:1px solid #c9bda8;
+    background:#fffdf8;
+    color:var(--ink);
+  }
+
+  .modal .view-text{
+    font-size:1.05rem;
+    line-height:1.55;
+    white-space:pre-wrap;
+    min-height:100px;
+    max-height:50vh;
+    overflow-y:auto;
+    margin-bottom:10px;
+  }
+
+  .modal .timestamp{
+    font-size:0.8rem;
+    font-style:italic;
+    opacity:0.6;
+    margin-bottom:14px;
+  }
+
+  .modal-actions{
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+    margin-top:16px;
+    flex-wrap:wrap;
+  }
+
+  .btn{
+    font-family:"Times New Roman", Times, serif;
+    font-size:0.95rem;
+    padding:9px 18px;
+    border:none;
+    cursor:pointer;
+    letter-spacing:0.3px;
+  }
+  .btn-primary{ background:var(--crimson); color:var(--cream); }
+  .btn-primary:hover{ background:var(--crimson-dark); }
+  .btn-secondary{ background:transparent; color:var(--ink); border:1px solid #b7a98d; }
+  .btn-secondary:hover{ background:#efe6d5; }
+  .btn-danger{ background:transparent; color:var(--crimson-dark); border:1px solid var(--crimson-dark); }
+  .btn-danger:hover{ background:#f6d9de; }
+
+  .close-x{
+    position:absolute;
+    top:10px;
+    right:14px;
+    font-size:1.3rem;
+    cursor:pointer;
+    color:var(--ink);
+    opacity:0.6;
+    line-height:1;
+    background:none;
+    border:none;
+    font-family:"Times New Roman", Times, serif;
+  }
+  .close-x:hover{ opacity:1; }
+
+  .status-msg{
+    font-size:0.85rem;
+    color:var(--crimson-dark);
+    margin-top:8px;
+    min-height:1em;
+    font-style:italic;
+  }
+
+  .loading-board{
+    text-align:center;
+    color:var(--cream);
+    padding:60px 20px;
+    font-style:italic;
+  }
+
+  @media (max-width:600px){
+    .banner{ font-size:1.6rem; padding:10px 26px; }
+    .note{ width:150px; min-height:130px; font-size:0.85rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hearts-bg" id="heartsBg"></div>
+
+<header>
+  <div class="banner">Confess Wall</div>
+  <div class="subtitle">pin what you can't say out loud</div>
+  <div class="global-note" id="globalNote">💌 every confession here is public — visible to anyone who opens this wall</div>
+</header>
+
+<div id="board">
+  <div class="loading-board" id="loadingMsg">gathering the confessions...</div>
+</div>
+
+<button id="add-btn" title="Pin a confession">＋</button>
+
+<!-- Add / View / Edit modal -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal">
+    <button class="close-x" id="closeModal">✕</button>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'confess-notes';
+  const SHARED = true;
+  const board = document.getElementById('board');
+  const overlay = document.getElementById('overlay');
+  const modalBody = document.getElementById('modalBody');
+  const addBtn = document.getElementById('add-btn');
+  const closeModal = document.getElementById('closeModal');
+  const heartsBg = document.getElementById('heartsBg');
+
+  const colors = ['paper-yellow','paper-pink','paper-mint','paper-sky','paper-lilac'];
+  let notes = [];
+
+  // ---------- synthesized sound effects (no audio files needed) ----------
+  const SFX = (function(){
+    let ctx = null;
+    function getCtx(){
+      if(!ctx){
+        try{ ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+        catch(e){ ctx = null; }
+      }
+      if(ctx && ctx.state === 'suspended'){ ctx.resume(); }
+      return ctx;
+    }
+
+    function tone(freq, start, dur, type, gainPeak, glideTo){
+      const c = getCtx();
+      if(!c) return;
+      const osc = c.createOscillator();
+      const gain = c.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.setValueAtTime(freq, c.currentTime + start);
+      if(glideTo){
+        osc.frequency.exponentialRampToValueAtTime(glideTo, c.currentTime + start + dur);
+      }
+      gain.gain.setValueAtTime(0.0001, c.currentTime + start);
+      gain.gain.exponentialRampToValueAtTime(gainPeak, c.currentTime + start + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + start + dur);
+      osc.connect(gain).connect(c.destination);
+      osc.start(c.currentTime + start);
+      osc.stop(c.currentTime + start + dur + 0.02);
+    }
+
+    function noiseBurst(start, dur, gainPeak, filterFreq){
+      const c = getCtx();
+      if(!c) return;
+      const bufferSize = Math.floor(c.sampleRate * dur);
+      const buffer = c.createBuffer(1, bufferSize, c.sampleRate);
+      const data = buffer.getChannelData(0);
+      for(let i=0;i<bufferSize;i++){ data[i] = (Math.random()*2 - 1); }
+      const src = c.createBufferSource();
+      src.buffer = buffer;
+      const filter = c.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = filterFreq || 1500;
+      const gain = c.createGain();
+      gain.gain.setValueAtTime(0.0001, c.currentTime + start);
+      gain.gain.exponentialRampToValueAtTime(gainPeak, c.currentTime + start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + start + dur);
+      src.connect(filter).connect(gain).connect(c.destination);
+      src.start(c.currentTime + start);
+      src.stop(c.currentTime + start + dur + 0.02);
+    }
+
+    return {
+      // soft click for buttons/toggles
+      click(){ tone(520, 0, 0.06, 'triangle', 0.05); },
+      // gentle open/paper rustle
+      open(){
+        noiseBurst(0, 0.18, 0.045, 1800);
+        tone(300, 0, 0.08, 'sine', 0.03, 420);
+      },
+      // bright little pin/pop when a confession is posted
+      pin(){
+        tone(660, 0, 0.09, 'triangle', 0.07, 880);
+        tone(990, 0.06, 0.08, 'sine', 0.04, 1200);
+      },
+      // soft crumple/drop for delete
+      delete(){
+        noiseBurst(0, 0.22, 0.06, 900);
+        tone(220, 0.02, 0.16, 'sine', 0.05, 90);
+      },
+      // whisper for modal close
+      close(){ tone(260, 0, 0.05, 'sine', 0.03, 180); }
+    };
+  })();
+
+  // ---------- ambient floating hearts ----------
+  function spawnHearts(){
+    for(let i=0;i<12;i++){
+      const h = document.createElement('div');
+      h.className = 'heart-float';
+      h.textContent = '♥';
+      h.style.left = Math.random()*100 + 'vw';
+      h.style.fontSize = (14 + Math.random()*18) + 'px';
+      h.style.animationDuration = (14 + Math.random()*12) + 's';
+      h.style.animationDelay = (Math.random()*14) + 's';
+      heartsBg.appendChild(h);
+    }
+  }
+  spawnHearts();
+
+  // ---------- storage helpers ----------
+  // In the Claude.ai preview, window.storage is available and notes are
+  // shared/global across everyone who opens this artifact link.
+  // Once downloaded and opened as a plain .html file, window.storage does
+  // not exist (there's no server), so we fall back to the browser's own
+  // localStorage. That works fully offline and online, but notes are then
+  // only visible in that browser/device, not shared globally.
+  const hasPlatformStorage = !!(window.storage && typeof window.storage.get === 'function');
+
+  async function loadNotes(){
+    if(hasPlatformStorage){
+      try{
+        const res = await window.storage.get(STORAGE_KEY, SHARED);
+        if(res && res.value){
+          return JSON.parse(res.value);
+        }
+        return [];
+      }catch(e){
+        return [];
+      }
+    }
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    }catch(e){
+      return [];
+    }
+  }
+
+  async function saveNotes(arr){
+    if(hasPlatformStorage){
+      try{
+        const res = await window.storage.set(STORAGE_KEY, JSON.stringify(arr), SHARED);
+        return !!res;
+      }catch(e){
+        console.error('save failed', e);
+        return false;
+      }
+    }
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+      return true;
+    }catch(e){
+      console.error('local save failed', e);
+      return false;
+    }
+  }
+
+  function fmtDate(ts){
+    const d = new Date(ts);
+    return d.toLocaleString(undefined, { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  }
+
+  // ---------- rendering ----------
+  function renderBoard(){
+    board.innerHTML = '';
+    if(notes.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.innerHTML = '<span>♡</span>The wall is empty. Be the first to confess.';
+      board.appendChild(empty);
+      return;
+    }
+
+    const isMobile = window.innerWidth < 700;
+    notes.forEach(n=>{
+      const el = document.createElement('div');
+      el.className = 'note ' + n.color;
+      el.style.left = (isMobile ? (n.x*0.6) : n.x) + '%';
+      el.style.top = n.y + 'px';
+      el.style.transform = 'rotate(' + n.rot + 'deg)';
+      el.innerHTML =
+        '<div class="pin"></div>' +
+        '<button class="quick-delete" title="Delete this confession">✕</button>' +
+        '<div class="note-text"></div>' +
+        '<div class="heart-mark">♥</div>';
+      el.querySelector('.note-text').textContent = n.text;
+      el.addEventListener('click', ()=>{ SFX.open(); openView(n.id); });
+      el.querySelector('.quick-delete').addEventListener('click', (e)=>{
+        e.stopPropagation();
+        quickDelete(n.id);
+      });
+      board.appendChild(el);
+    });
+
+    // set board height to fit lowest note
+    let maxBottom = 300;
+    notes.forEach(n=>{ maxBottom = Math.max(maxBottom, n.y + 220); });
+    board.style.minHeight = maxBottom + 'px';
+  }
+
+  function randomLayout(){
+    return {
+      x: 4 + Math.random()*72,
+      y: 20 + Math.random()* Math.max(300, (notes.length*40)),
+      rot: (Math.random()*16 - 8).toFixed(1)
+    };
+  }
+
+  // ---------- modal: add ----------
+  function openAdd(){
+    modalBody.innerHTML =
+      '<h2>New confession</h2>' +
+      '<textarea id="addText" placeholder="Say what you\'ve been holding back..." maxlength="1500"></textarea>' +
+      '<div class="status-msg" id="addStatus"></div>' +
+      '<div class="modal-actions">' +
+        '<button class="btn btn-secondary" id="cancelAdd">Cancel</button>' +
+        '<button class="btn btn-primary" id="postBtn">Pin it 💌</button>' +
+      '</div>';
+    overlay.classList.add('active');
+    document.getElementById('addText').focus();
+    document.getElementById('cancelAdd').addEventListener('click', close);
+    document.getElementById('postBtn').addEventListener('click', async ()=>{
+      const text = document.getElementById('addText').value.trim();
+      const status = document.getElementById('addStatus');
+      if(!text){
+        status.textContent = 'Write something first.';
+        return;
+      }
+      status.textContent = 'Pinning...';
+      const layout = randomLayout();
+      const newNote = {
+        id: 'n' + Date.now() + Math.random().toString(36).slice(2,7),
+        text: text,
+        color: colors[Math.floor(Math.random()*colors.length)],
+        created: Date.now(),
+        edited: null,
+        x: layout.x, y: layout.y, rot: layout.rot
+      };
+      notes.unshift(newNote);
+      const ok = await saveNotes(notes);
+      if(ok){
+        renderBoard();
+        SFX.pin();
+        close();
+      }else{
+        status.textContent = 'Could not save. Try again.';
+        notes.shift();
+      }
+    });
+  }
+
+  // ---------- modal: view ----------
+  function openView(id){
+    const n = notes.find(x=>x.id===id);
+    if(!n) return;
+    modalBody.innerHTML =
+      '<h2>A confession</h2>' +
+      '<div class="view-text"></div>' +
+      '<div class="timestamp"></div>' +
+      '<div class="status-msg" id="viewStatus"></div>' +
+      '<div class="modal-actions">' +
+        '<button class="btn btn-danger" id="delBtn">Delete</button>' +
+        '<button class="btn btn-secondary" id="editBtn">Edit</button>' +
+        '<button class="btn btn-primary" id="doneBtn">Close</button>' +
+      '</div>';
+    modalBody.querySelector('.view-text').textContent = n.text;
+    modalBody.querySelector('.timestamp').textContent =
+      'pinned ' + fmtDate(n.created) + (n.edited ? ' · edited ' + fmtDate(n.edited) : '');
+
+    document.getElementById('doneBtn').addEventListener('click', close);
+    document.getElementById('editBtn').addEventListener('click', ()=> openEdit(id));
+    const delBtn = document.getElementById('delBtn');
+    let deleteArmed = false;
+    delBtn.addEventListener('click', async ()=>{
+      const status = document.getElementById('viewStatus');
+      if(!deleteArmed){
+        deleteArmed = true;
+        delBtn.textContent = 'Click again to confirm';
+        status.textContent = 'This removes it from the wall for everyone.';
+        return;
+      }
+      status.textContent = 'Deleting...';
+      const backup = notes;
+      notes = notes.filter(x=>x.id!==id);
+      const ok = await saveNotes(notes);
+      if(ok){
+        renderBoard();
+        SFX.delete();
+        close();
+      }else{
+        notes = backup;
+        status.textContent = 'Could not delete. Try again.';
+        deleteArmed = false;
+        delBtn.textContent = 'Delete';
+      }
+    });
+  }
+
+  // ---------- modal: edit ----------
+  function openEdit(id){
+    const n = notes.find(x=>x.id===id);
+    if(!n) return;
+    modalBody.innerHTML =
+      '<h2>Edit confession</h2>' +
+      '<textarea id="editText" maxlength="1500"></textarea>' +
+      '<div class="status-msg" id="editStatus"></div>' +
+      '<div class="modal-actions">' +
+        '<button class="btn btn-secondary" id="cancelEdit">Cancel</button>' +
+        '<button class="btn btn-primary" id="saveEdit">Save changes</button>' +
+      '</div>';
+    document.getElementById('editText').value = n.text;
+    document.getElementById('cancelEdit').addEventListener('click', ()=> openView(id));
+    document.getElementById('saveEdit').addEventListener('click', async ()=>{
+      const newText = document.getElementById('editText').value.trim();
+      const status = document.getElementById('editStatus');
+      if(!newText){
+        status.textContent = 'Confession can\'t be empty.';
+        return;
+      }
+      status.textContent = 'Saving...';
+      const backupText = n.text;
+      const backupEdited = n.edited;
+      n.text = newText;
+      n.edited = Date.now();
+      const ok = await saveNotes(notes);
+      if(ok){
+        renderBoard();
+        SFX.click();
+        openView(id);
+      }else{
+        n.text = backupText;
+        n.edited = backupEdited;
+        status.textContent = 'Could not save. Try again.';
+      }
+    });
+  }
+
+  function close(){
+    SFX.close();
+    overlay.classList.remove('active');
+    modalBody.innerHTML = '';
+  }
+
+  async function quickDelete(id){
+    const backup = notes;
+    notes = notes.filter(x=>x.id!==id);
+    renderBoard();
+    const ok = await saveNotes(notes);
+    if(ok){
+      SFX.delete();
+    }else{
+      notes = backup;
+      renderBoard();
+    }
+  }
+
+  overlay.addEventListener('click', (e)=>{ if(e.target === overlay) close(); });
+  closeModal.addEventListener('click', close);
+  addBtn.addEventListener('click', ()=>{ SFX.click(); openAdd(); });
+  window.addEventListener('resize', renderBoard);
+
+  // ---------- init ----------
+  (async function init(){
+    const noteEl = document.getElementById('globalNote');
+    if(noteEl){
+      noteEl.textContent = hasPlatformStorage
+        ? '💌 every confession here is public — visible to anyone who opens this wall'
+        : '💌 saved right in this browser — works offline, and pins stay here even after you close the tab';
+    }
+    notes = await loadNotes();
+    // normalize legacy/missing layout fields just in case
+    notes.forEach(n=>{
+      if(typeof n.x !== 'number') n.x = 4 + Math.random()*72;
+      if(typeof n.y !== 'number') n.y = 20 + Math.random()*300;
+      if(n.rot === undefined) n.rot = (Math.random()*16 - 8).toFixed(1);
+      if(!n.color) n.color = colors[Math.floor(Math.random()*colors.length)];
+    });
+    renderBoard();
+  })();
+})();
+</script>
+
+</body>
+</html>
